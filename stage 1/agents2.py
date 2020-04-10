@@ -10,13 +10,6 @@ import policies as pol
 import policyUtils as pu
 import termBar as tb
 
-
-'''
-SETTINGS
-'''
-np.set_printoptions(suppress=True)
-# random.seed(123); np.random.seed(123)
-
 '''
 print out larger frozen lake world
 start a random policy
@@ -28,6 +21,43 @@ evaluate new probability of success
 
 good job
 '''
+
+#######################################
+#   settings
+#######################################
+np.set_printoptions(suppress=True)
+# random.seed(123); np.random.seed(123)
+
+#######################################
+#   helpers
+#######################################
+def speculatePolicy(pi, P, env, goalState):
+    pu.print_policy(pi, P, action_symbols=("<", 'v', '>', '^'), n_cols=4)
+    V = pu.policy_evaluation(pi, P)
+    pu.print_state_value_function(V, P)
+    
+    successProbability = pu.probability_success(env, pi, goalState) * 100.0
+    meanReturn = pu.mean_return(env, pi)
+    print("Success Probability: " + str(successProbability))
+    print("Mean Value Return: " + str(meanReturn))
+
+def watchPolicyIterate(pi, P, env, goalState, numIters=2):
+    V = pu.policy_evaluation(pi, P)
+    for i in range(0, numIters):
+        print()
+        print("Iter: " + str(i))
+        pi = pu.policy_improvement(V, P)
+        pu.print_policy(pi, P, action_symbols=("<", 'v', '>', '^'), n_cols=4)
+        V = pu.policy_evaluation(pi, P)
+        pu.print_state_value_function(V, P)
+
+        successProbability = pu.probability_success(env, pi, goalState) * 100.0
+        meanReturn = pu.mean_return(env, pi)
+        print("Success Probability: " + str(successProbability))
+        print("Mean Value Return: " + str(meanReturn))
+
+    return pi
+
 #######################################
 #   policy creation and evaluation
 #######################################
@@ -38,18 +68,12 @@ env = gym.make('FrozenLake-v0')
 P = env.env.P
 initState = env.reset()
 goalState = 15
-
 LEFT, DOWN, RIGHT, UP = range(4)
 
 #   make random policy
 tb.printSubHeader("Random Policy")
 randomPi = pu.genRandomPolicy(len(P), 4)
-pu.print_policy(randomPi, P, action_symbols=("<", 'v', '>', '^'), n_cols=4)
-successProbability = pu.probability_success(env, randomPi, goalState)
-meanReturn = pu.mean_return(env, randomPi)
-
-print(successProbability * 100.0)
-print(meanReturn)
+speculatePolicy(randomPi, P, env, goalState)
 
 #   make human reasoned solution policy
 tb.printSubHeader("Greedy Human Policy")
@@ -59,12 +83,7 @@ goGetPi = lambda s: {
     8:RIGHT, 9:RIGHT, 10:DOWN, 11:LEFT,
     12:LEFT, 13:RIGHT, 14:RIGHT, 15:LEFT
 }[s]
-pu.print_policy(goGetPi, P, action_symbols=("<", 'v', '>', '^'), n_cols=4)
-successProbability = pu.probability_success(env, goGetPi, goalState)
-meanReturn = pu.mean_return(env, goGetPi)
-
-print(successProbability * 100.0)
-print(meanReturn)
+speculatePolicy(goGetPi, P, env, goalState)
 
 #######################################
 #   policy iteration
@@ -77,55 +96,28 @@ tb.printSubHeader("Improve Random Policy")
 #   #   before
 tb.printSubSubHeader("Before")
 randomPi = pu.genRandomPolicy(len(P), 4)
-pu.print_policy(randomPi, P, action_symbols=("<", 'v', '>', '^'), n_cols=4)
-successProbability = pu.probability_success(env, randomPi, goalState)
-meanReturn = pu.mean_return(env, randomPi)
-print(successProbability * 100.0)
-print(meanReturn)
+speculatePolicy(randomPi, P, env, goalState)
 
 #   #   iterate
-for i in range(0, 3):
-    V = pu.policy_evaluation(randomPi, P)
-    randomPi = pu.policy_improvement(V, P)
-    pu.print_policy(randomPi, P, action_symbols=("<", 'v', '>', '^'), n_cols=4)
-    successProbability = pu.probability_success(env, randomPi, goalState)
-    meanReturn = pu.mean_return(env, randomPi)
-    print(successProbability * 100.0)
-    print(meanReturn)
+tb.printSubSubHeader("Iteration")
+randomPi = watchPolicyIterate(randomPi, P, env, goalState, numIters=2)
 
 #   #   after
 tb.printSubSubHeader("After")
-pu.print_policy(randomPi, P, action_symbols=("<", 'v', '>', '^'), n_cols=4)
-successProbability = pu.probability_success(env, randomPi, goalState)
-meanReturn = pu.mean_return(env, randomPi)
-print(successProbability * 100.0)
-print(meanReturn)
+speculatePolicy(randomPi, P, env, goalState)
+
 
 #   lets improve the human reasoned policy
 tb.printSubHeader("Improve Human Greedy Policy")
 
 #   #   before
 tb.printSubSubHeader("Before")
-pu.print_policy(goGetPi, P, action_symbols=("<", 'v', '>', '^'), n_cols=4)
-successProbability = pu.probability_success(env, goGetPi, goalState)
-meanReturn = pu.mean_return(env, goGetPi)
-print(successProbability * 100.0)
-print(meanReturn)
+speculatePolicy(goGetPi, P, env, goalState)
 
 #   #   iterate
-for i in range(0, 3):
-    V = pu.policy_evaluation(goGetPi, P)
-    goGetPi = pu.policy_improvement(V, P)
-    pu.print_policy(goGetPi, P, action_symbols=("<", 'v', '>', '^'), n_cols=4)
-    successProbability = pu.probability_success(env, goGetPi, goalState)
-    meanReturn = pu.mean_return(env, goGetPi)
-    print(successProbability * 100.0)
-    print(meanReturn)
+tb.printSubSubHeader("Iteration")
+goGetPi = watchPolicyIterate(goGetPi, P, env, goalState, numIters=2)
 
 #   #   after
 tb.printSubSubHeader("After")
-pu.print_policy(goGetPi, P, action_symbols=("<", 'v', '>', '^'), n_cols=4)
-successProbability = pu.probability_success(env, goGetPi, goalState)
-meanReturn = pu.mean_return(env, goGetPi)
-print(successProbability * 100.0)
-print(meanReturn)
+speculatePolicy(goGetPi, P, env, goalState)

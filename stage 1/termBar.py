@@ -2,6 +2,7 @@ def printBar(char="#", length=40):
     print(char*length)
 
 def printHeader(msg, length=40):
+    print()
     printBar(length=40)
     print("####\t" + msg)
     printBar(length=40)
