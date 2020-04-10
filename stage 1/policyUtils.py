@@ -97,3 +97,22 @@ def print_action_value_function(Q,
     if not (optimal_Q is None):
         arr = np.hstack((arr, np.round(optimal_Q, prec), np.round(optimal_Q-Q, prec)))
     print(tabulate(arr, headers, tablefmt="fancy_grid"))
+
+def genRandomPolicy(numStates, numActions):
+    stateActions = {}
+    for i in range(numStates):
+        stateActions[i] = random.randint(0, numActions - 1)
+    pi = lambda s: stateActions[s]
+    return pi
+
+def mean_return(env, pi, n_episodes=100, max_steps=200):
+    random.seed(123); np.random.seed(123) ; env.seed(123)
+    results = []
+    for _ in range(n_episodes):
+        state, done, steps = env.reset(), False, 0
+        results.append(0.0)
+        while not done and steps < max_steps:
+            state, reward, done, _ = env.step(pi(state))
+            results[-1] += reward
+            steps += 1
+    return np.mean(results)

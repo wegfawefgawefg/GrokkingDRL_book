@@ -42,8 +42,6 @@ pi = lambda s: {
 pu.print_policy(pi, P, action_symbols=('<', '>'), n_cols=7)
 V = pu.policy_evaluation(pi, P)
 pu.print_state_value_function(V, P, n_cols=7)
-pu.print_action_value_function(
-
 
 successProbPerGoal = np.zeros(len(P), dtype=np.float64)
 for i in range(len(P)):
