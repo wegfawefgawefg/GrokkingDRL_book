@@ -89,7 +89,7 @@ can i update with ann entire minibatch instead of one at a time
 ############################################################
 ####    SETTINGS
 ############################################################
-numMemoryFrames = 3
+numMemoryFrames = 32
 batchSize = 256
 miniBatchSize = 1
 numTrainingEpisodes = 1000
@@ -100,8 +100,8 @@ EnvResponse = namedtuple('EnvResponse', ['obs', 'reward', 'done', 'info'])
 ############################################################
 ####    MAIN
 ############################################################
-net = arc.TinyNet(6 * numMemoryFrames, 1024, 2)
-# net = arc.MedNet(6 * numMemoryFrames, 128, 2)
+# net = arc.TinyNet(6 * numMemoryFrames, 1024, 2)
+net = arc.MedNet(6 * numMemoryFrames, 1028, 2)
 criterion = nn.MSELoss(reduction='sum')
 optimizer = optim.Adam(net.parameters(), lr=0.01)
 
