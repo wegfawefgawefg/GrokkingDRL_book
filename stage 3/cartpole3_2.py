@@ -12,6 +12,10 @@ import architectures as arc
 from collections import deque, namedtuple
 import numpy as np
 
+'''
+gpu accelerate by batching the random sampling shit
+'''
+
 ############################################################
 ####    HELPERS
 ############################################################
@@ -26,8 +30,8 @@ def computeReward(frame, done):
 ############################################################
 GAMMA = 0.95
 
-MEMORY_SIZE = 1000000
-# MEMORY_SIZE = 1000
+# MEMORY_SIZE = 1000000
+MEMORY_SIZE = 7000
 # BATCH_SIZE = 20
 BATCH_SIZE = 64
 
@@ -36,7 +40,7 @@ EPSILON_MIN = 0.01
 EPSILON_DECAY = 0.995
 # EPSILON_DECAY = 0.998
 
-NUM_TRAINING_EPSISODES = 100
+NUM_TRAINING_EPSISODES = 300
 MemoryFrame = namedtuple('MemoryFrame', 
     ['obsFrame', 'action', 'reward', 'nextObsFrame', 'done'])
 
@@ -106,6 +110,21 @@ while True:
         #   #   (also a lot of bad ones)
         if len(memoryBank) >= BATCH_SIZE:
             memoryBatch = random.sample(memoryBank, BATCH_SIZE)
+            # memoryBatchStack = MemoryFrame(*zip(*memoryBatch))
+
+            # memObsFrames =      torch.stack(    memoryBatchStack.obsFrame)
+            # memActions =        torch.tensor(   memoryBatchStack.action         , dtype=torch.float32)
+            # memRewards =        torch.tensor(   memoryBatchStack.reward         , dtype=torch.float32)
+            # memNextObsFrames =  torch.stack(    memoryBatchStack.nextObsFrame)
+            # memDones =          torch.tensor(   memoryBatchStack.done)
+
+            # print(memObsFrames)
+            # print(memActions)
+            # print(memRewards)
+            # print(memNextObsFrames)
+            # print(memDones)
+            # quit()
+
             for memory in memoryBatch:
                 q_update = memory.reward
                 if not memory.done:
@@ -125,7 +144,7 @@ while True:
                 newQValues[0][memory.action] = q_update
                 # print(newQValues)
                 loss = criterion(output, newQValues)
-                # print(loss)
+                print(loss)
                 net.zero_grad()
                 loss.backward()
                 optimizer.step()

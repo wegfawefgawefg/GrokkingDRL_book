@@ -12,6 +12,10 @@ import architectures as arc
 from collections import deque, namedtuple
 import numpy as np
 
+'''
+gpu accelerate by batching the random sampling shit
+'''
+
 ############################################################
 ####    HELPERS
 ############################################################
@@ -26,8 +30,8 @@ def computeReward(frame, done):
 ############################################################
 GAMMA = 0.95
 
-MEMORY_SIZE = 1000000
-# MEMORY_SIZE = 1000
+# MEMORY_SIZE = 1000000
+MEMORY_SIZE = 7000
 # BATCH_SIZE = 20
 BATCH_SIZE = 64
 
@@ -36,7 +40,7 @@ EPSILON_MIN = 0.01
 EPSILON_DECAY = 0.995
 # EPSILON_DECAY = 0.998
 
-NUM_TRAINING_EPSISODES = 100
+NUM_TRAINING_EPSISODES = 300
 MemoryFrame = namedtuple('MemoryFrame', 
     ['obsFrame', 'action', 'reward', 'nextObsFrame', 'done'])
 
@@ -44,9 +48,9 @@ MemoryFrame = namedtuple('MemoryFrame',
 ####    MAIN
 ############################################################
 #   setup net
-net = arc.FlexNet(4, 2, (24,))
+# net = arc.FlexNet(4, 2, (24,))
 # net = arc.FlexNet(4, 2, (64,64, 64))
-# net = arc.TwoNet(4, 2, 24)
+net = arc.TwoNet(4, 2, 24)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(net.parameters(), lr=0.001)
 memoryBank = deque(maxlen=MEMORY_SIZE)
