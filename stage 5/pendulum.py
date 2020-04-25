@@ -12,6 +12,7 @@ import architectures as arc
 from collections import deque, namedtuple
 import numpy as np
 import termBar as tbar
+import math
 
 '''
 TODO:
@@ -34,7 +35,13 @@ give it a memory of more than one frame
 ############################################################
 ####    HELPERS
 ############################################################
-def computeReward(frame, done):
+def getRichReward_cartpolev1(frame, done):
+    absObs = frame.abs()
+    punishment = -absObs.sum()
+    value = 0.5 * punishment 
+    return value
+
+def getRichReward_acrobotv1(frame, done):
     absObs = frame.abs()
     punishment = -absObs.sum()
     value = 0.5 * punishment 
@@ -43,17 +50,18 @@ def computeReward(frame, done):
 ############################################################
 ####    SETTINGS
 ############################################################
+ENV_NAME = "Pendulum-v0"
 GAMMA = 0.95
 
 # MEMORY_SIZE = 1000000
 MEMORY_SIZE = 7000
 # BATCH_SIZE = 20
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 
 EPSILON_MAX = 1.0
 EPSILON_MIN = 0.01
-EPSILON_DECAY = 0.995
-# EPSILON_DECAY = 0.998
+# EPSILON_DECAY = 0.995
+EPSILON_DECAY = 0.999
 
 NUM_TRAINING_EPSISODES = 300
 MemoryFrame = namedtuple('MemoryFrame', 
@@ -65,31 +73,34 @@ CONSECUTIVE_WIN_REQUIREMENTS = 5
 ############################################################
 ####    SETUP
 ############################################################
+env = gym.make(ENV_NAME)
+NUM_ACTIONS = env.action_space.shape[0]
+NUM_OBS = env.observation_space.shape[0]
+print("Env: " + ENV_NAME)
+print("Num Actions: " + str(NUM_ACTIONS))
+print("Num Obs: " + str(NUM_OBS))
+
 #   setup net
-# net = arc.FlexNet(4, 2, (24,))
-# net = arc.FlexNet(4, 2, (64,64, 64))
-net = arc.TwoNet(4, 2, 24)
+# net = arc.FlexNet(NUM_OBS, NUM_ACTIONS, (24,))
+# net = arc.FlexNet(NUM_OBS, NUM_ACTIONS, (64,64, 64))
+net = arc.TwoNet(NUM_OBS, 2, 24)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(net.parameters(), lr=0.001)
 memoryBank = deque(maxlen=MEMORY_SIZE)
 epsilon = EPSILON_MAX
 lastNScores = deque(maxlen=CONSECUTIVE_WIN_REQUIREMENTS)
 
-env = gym.make('CartPole-v1')
-print(env.action_space)
-print(env.observation_space)
-
 ############################################################
 ####    TRAIN
 ############################################################
 tbar.printHeader("TRAIN MODE")
 net.train()
-recordReward, recordTimesteps, episode = 0, 0, 0
+recordReward, recordTimesteps, episode = -math.inf, 0, 0
 #   play game until max score reached CONSECUTIVE_WIN_REQUIREMENTS times in a row
 finishedTraining = False
 while not finishedTraining:
     obs = env.reset()
-    obsFrame = torch.tensor(obs, dtype=torch.float32).view(-1, 4)
+    obsFrame = torch.tensor(obs, dtype=torch.float32).view(-1, NUM_OBS)
 
     #   run the game
     #   #   break out and start another on fail
@@ -99,19 +110,26 @@ while not finishedTraining:
         frameNum += 1
 
         #   pick next action
-        if np.random.rand() < epsilon:   #   EXPLORE: take random action
-            action = random.randint(0, 1)
-        else:   #   EXPLOIT: net chooses action
-            output = net(obsFrame).clone().detach()
-            values, index = output.max(1)
-            action = int(index)
+        # if np.random.rand() < epsilon:   #   EXPLORE: take random action
+        #     action = (np.random.random(1) - 0.5) * 4.0  #   action between -2.0, and 2.0
+        #     print(action)
+        # else:   #   EXPLOIT: net chooses action
+        #     output = net(obsFrame).clone().detach()
+        #     print(output)
+        #     values, index = output.max(1)
+        #     print(values)
+        #     quit()
+
+        output = net(obsFrame).clone().detach()
+        action = output[0]
+        print(action)
 
         #   tic game
         nextObs, reward, done, info = env.step(action)
-        nextObsFrame = torch.tensor(nextObs, dtype=torch.float32).view(-1, 4)
-        complexReward = computeReward(nextObsFrame, done)
+        nextObsFrame = torch.tensor(nextObs, dtype=torch.float32).view(-1, NUM_OBS)
+        # richReward = computeReward(nextObsFrame, done)
         reward = reward if not done else -reward
-        reward = complexReward + reward
+        # reward = reward + richReward
         totalReward += reward
 
         #   add memory frame
@@ -142,12 +160,8 @@ while not finishedTraining:
             
                 output = net(memory.obsFrame)
                 newQValues = output.clone().detach()
-                # print("newQValues:")
-                # print(newQValues)
                 newQValues[0][memory.action] = q_update
-                # print(newQValues)
                 loss = criterion(output, newQValues)
-                # print(loss)
                 net.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -157,9 +171,9 @@ while not finishedTraining:
             
     #   post episode logic
     episode += 1
-    lastNScores.append(frameNum)
+    lastNScores.append(totalReward)
     finishedTraining = all(score >= DONE_TRAINING_SCORE for score in lastNScores)
-    if frameNum+1 > recordTimesteps:
+    if frameNum+1 < recordTimesteps:
         recordTimesteps = frameNum+1
     if totalReward > recordReward:
         recordReward = totalReward
@@ -173,7 +187,7 @@ while not finishedTraining:
         ))
 
 ############################################################
-####    SAVE MODEL
+####    SAVE MODEL  ???
 ############################################################
 
 
@@ -186,7 +200,7 @@ net.eval()
 recordReward, recordTimesteps, episode = 0, 0, 0
 while True:
     obs = env.reset()
-    obsFrame = torch.tensor(obs, dtype=torch.float32).view(-1, 4)
+    obsFrame = torch.tensor(obs, dtype=torch.float32).view(-1, NUM_OBS)
 
     #   run the game
     #   #   break out and start another on fail
@@ -202,7 +216,7 @@ while True:
 
         #   tic game
         nextObs, reward, done, info = env.step(action)
-        nextObsFrame = torch.tensor(nextObs, dtype=torch.float32).view(-1, 4)
+        nextObsFrame = torch.tensor(nextObs, dtype=torch.float32).view(-1, NUM_OBS)
         # reward = computeReward(nextObsFrame, done)
         reward = reward if not done else -reward
         totalReward += reward
@@ -214,7 +228,7 @@ while True:
 
     #   post episode logic
     episode += 1
-    if frameNum+1 > recordTimesteps:
+    if frameNum+1 < recordTimesteps:
         recordTimesteps = frameNum+1
     if totalReward > recordReward:
         recordReward = totalReward
