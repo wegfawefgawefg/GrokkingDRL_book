@@ -121,7 +121,7 @@ if __name__ == '__main__':
     import math
     from matplotlib import pyplot as plt
     
-    agent = DQDiscreteAgent(lr=0.0001, inputShape=(8,), numActions=4, batchSize=64)
+    agent = DQDiscreteAgent(lr=0.001, inputShape=(8,), numActions=4, batchSize=64)
     env = gym.make("LunarLander-v2")
 
     scoreHistory = []
