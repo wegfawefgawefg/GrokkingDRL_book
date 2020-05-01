@@ -105,8 +105,9 @@ if __name__ == '__main__':
             ))
 
     fig = plt.figure()
-    plt.plot(np.arange(0, numEpisodes, 1.0), scoreHistory)
-    plt.ylabel("score")
+    meanWindow = 10
+    meanedScoreHistory = np.convolve(scoreHistory, np.ones(meanWindow), 'valid') / meanWindow
+    plt.plot(np.arange(0, numEpisodes-1, 1.0), meanedScoreHistory)    plt.ylabel("score")
     plt.xlabel("episode")
     plt.title("Training Scores")
     plt.show()
