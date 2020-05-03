@@ -24,9 +24,9 @@ class ReplayBuffer():
 
         self.memCount += 1
 
-    def sample(self, sampleSize):
+    def sample(self):
         memMax = min(self.memCount, self.memSize)
-        batchIndecies = np.random.choice(memMax, sampleSize, replace=False)
+        batchIndecies = np.arange(self.memSize, dtype=np.int64)
 
         states = self.stateMemory[batchIndecies]
         actions = self.actionMemory[batchIndecies]
@@ -51,7 +51,8 @@ class DeepQNetwork(nn.Module):
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
         self.loss = nn.MSELoss()
 
-        self.device = torch.device( "cuda" if torch.cuda.is_available() else "cpu")
+        # self.device = torch.device( "cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cpu")
         self.to(self.device)
 
     def forward(self, x):
@@ -60,15 +61,14 @@ class DeepQNetwork(nn.Module):
         x = self.fc3(x)
         return x
 
-class DQDiscreteAgent():
-    def __init__(self, lr, inputShape, numActions, batchSize, epsilon=1.0, gamma=0.99, layer1Size=256, 
-            layer2Size=256, maxMemSize=100000, epsMin=0.01, epsDecay=5e-4):
+class DQAgent():
+    def __init__(self, lr, inputShape, numActions, maxMemSize=1, epsilon=1.0, gamma=0.99, layer1Size=256, 
+            layer2Size=256, epsMin=0.01, epsDecay=5e-4):
         self.lr = lr
         self.epsilon = epsilon
         self.epsMin = epsMin
         self.epsDecay = epsDecay
         self.gamma = gamma
-        self.batchSize = batchSize
         self.actionSpace = list(range(numActions))
         
         self.memory = ReplayBuffer(maxMemSize, inputShape)
@@ -87,20 +87,20 @@ class DQDiscreteAgent():
         self.memory.storeMemory(state, action, reward, nextState, done)
 
     def learn(self):
-        if self.memory.memCount < self.batchSize:
+        if self.memory.memCount < self.memory.memSize:
             return
 
         self.deepQNetwork.optimizer.zero_grad()
     
         stateBatch, actionBatch, rewardBatch, nextStateBatch, doneBatch = \
-            self.memory.sample(self.batchSize)
+            self.memory.sample()
         stateBatch = torch.tensor(stateBatch).to(self.deepQNetwork.device)
         actionBatch = torch.tensor(actionBatch).to(self.deepQNetwork.device)
         rewardBatch = torch.tensor(rewardBatch).to(self.deepQNetwork.device)
         nextStateBatch = torch.tensor(nextStateBatch).to(self.deepQNetwork.device)
         doneBatch = torch.tensor(doneBatch).to(self.deepQNetwork.device)
         
-        batchIndex = np.arange(self.batchSize, dtype=np.int64)
+        batchIndex = np.arange(self.memory.memSize, dtype=np.int64)
 
         actionQs = self.deepQNetwork(stateBatch)[batchIndex, actionBatch]
         allNextActionQs = self.deepQNetwork(nextStateBatch)
@@ -120,12 +120,12 @@ if __name__ == '__main__':
     import math
     from matplotlib import pyplot as plt
     
-    agent = DQDiscreteAgent(lr=0.001, inputShape=(8,), numActions=4, batchSize=64)
+    agent = DQAgent(lr=0.01, inputShape=(8,), numActions=4, maxMemSize=1)
     env = gym.make("LunarLander-v2")
 
     scoreHistory = []
     numEpisodes = 2000
-    numTrainingEpisodes = 50
+    numTrainingEpisodes = 30
     highScore = -math.inf
     recordTimeSteps = math.inf
     for episode in range(numEpisodes):
