@@ -53,6 +53,16 @@ class PolicyGradientAgent():
         return action.item()
 
     def learn(self):
+        '''
+        for each experience we have stored we compute the entire complete reward
+        that means for reward 0 its r0 + y^1*r1 + y^2*r2 + y^3*r3 ... y*(t-1)*rt
+        then we multiply the total reward G for each experience into the chosen action probabiliy
+        essentially rewarding bad actions by small rewards
+        and good actions by big rewards
+
+        thus making the good actioon be more probable and the ungood be less probable
+        '''
+
 
         self.policyNet.optimizer.zero_grad()
     
